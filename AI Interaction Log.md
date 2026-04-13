@@ -938,6 +938,7 @@ Here’s what was done across your four goals:
 
 ---
 
+
 **Note:** Resume **excerpts** in the table are still **user-uploaded content** by design (for the POC). They are not “secrets,” but treat production data under your own policy.
 
 ---
