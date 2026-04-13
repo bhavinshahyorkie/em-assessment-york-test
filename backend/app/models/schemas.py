@@ -1,3 +1,5 @@
+"""Pydantic models for JSON responses from `POST /match`."""
+
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +14,8 @@ class RankedRow(BaseModel):
 
 
 class MatchResponse(BaseModel):
+    """Successful match run: ranked candidates plus metadata for the UI."""
+
     job_label: str
     embedding_model: str
     ranked: list[RankedRow]

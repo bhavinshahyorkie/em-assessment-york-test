@@ -1,12 +1,16 @@
+"""Application settings loaded from environment and `backend/.env` (never commit secrets)."""
+
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve `.env` from the `backend/` package root so the key loads even if uvicorn's cwd is not `backend/`.
-_BACKEND_DIR = Path(__file__).resolve().parent.parent
+# backend/app/core/config.py -> parents: core -> app -> backend
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
+    """Env-driven config. Secrets (e.g. API keys) must live in `.env` or the process environment only."""
+
     model_config = SettingsConfigDict(
         env_file=_BACKEND_DIR / ".env",
         env_file_encoding="utf-8",

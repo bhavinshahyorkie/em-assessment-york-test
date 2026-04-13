@@ -1,3 +1,5 @@
+"""DOCX / OOXML Word text extraction (`python-docx` plus ZIP/XML fallback for strict exports)."""
+
 from __future__ import annotations
 
 import io

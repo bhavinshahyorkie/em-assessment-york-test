@@ -9,8 +9,36 @@ This document describes the proof-of-concept (POC) implementation, how it satisf
 | # | Constraint | Status | Where it is met |
 | --- | --- | --- | --- |
 | **1** | **File format handling:** ingest at least **PDF** and **DOCX**; parsing **extensible** to new formats without a full rewrite. | **Met** | **PDF:** `backend/app/parsers/pdf_parser.py` (PyMuPDF). **DOCX:** `backend/app/parsers/docx_parser.py` (`python-docx` + OOXML ZIP/XML fallback). **Extensibility:** abstract `DocumentParser` + `ParserRegistry` in `backend/app/parsers/base.py`; add a class, implement `supports()` / `parse()`, register in `default_registry()` — **`POST /match` and callers stay unchanged.** Optional byte sniffing: `backend/app/parsers/sniff.py`. |
-| **2** | **Data pipeline:** **raw document intake → parsing → scoring → ranked output**; design suitable for production even if the POC is not production-grade. | **Met** | **Implemented** end-to-end in `backend/app/main.py` (`match_candidates`). Stages below. **Production-scale** options are in [Production-scale design](#production-scale-design) and the [data-flow diagram](#data-flow). |
+| **2** | **Data pipeline:** **raw document intake → parsing → scoring → ranked output**; design suitable for production even if the POC is not production-grade. | **Met** | **Implemented** in `backend/app/api/routes/match.py` + `backend/app/services/matching_pipeline.py`. Stages below. **Production-scale** options are in [Production-scale design](#production-scale-design) and the [data-flow diagram](#data-flow). |
 | **3** | **Cold start accuracy:** handle a **brand-new job posting** with **no historical data** or prior match signals — approach must be **reasoned and defensible**, not “we will add this later” as the only answer. | **Met** | **Primary strategy (implemented, not deferred):** general-purpose **text embeddings** + **cosine similarity** between JD and each resume. Pretrained models encode semantics without needing labels for *this* role. See [Cold start accuracy](#cold-start-accuracy) and the `cold_start_note` field in the `POST /match` JSON response. |
+
+---
+
+## Repository layout (scaling)
+
+### Backend (`backend/app/`)
+
+| Path | Purpose |
+| --- | --- |
+| **`main.py`** | Create FastAPI app, CORS, **register routers** only — keep this file small. |
+| **`core/`** | Settings and env (`config.py`). Add shared constants or security helpers here later. |
+| **`api/deps.py`** | `Depends()` providers (parsers, embedders). Wire new services once, inject everywhere. |
+| **`api/helpers.py`** | HTTP/multipart helpers (not business rules). |
+| **`api/routes/`** | One module per route group (`health.py`, `match.py`). **New REST resources** → new file + `app.include_router(...)`. |
+| **`models/`** | Pydantic response/request models. Split by domain when it grows. |
+| **`parsers/`** | Pluggable formats (`DocumentParser` + `ParserRegistry`). |
+| **`services/`** | Embeddings, ranking, **`matching_pipeline.py`** (orchestration). Add rerankers, queues, or caching here without touching routes. |
+
+### Frontend (`frontend/src/`)
+
+| Path | Purpose |
+| --- | --- |
+| **`main.tsx`** | React bootstrap. |
+| **`app/`** | Top-level screen(s): `App.tsx`, co-located CSS. |
+| **`lib/`** | Pure utilities: API URL, constants, redaction (no JSX). |
+| **`types/`** | TypeScript types aligned with the API. |
+| **`components/`** | Shared UI pieces (empty placeholder for now). |
+| **`features/`** | Optional feature folders as routes/screens multiply. |
 
 ---
 
@@ -18,7 +46,7 @@ This document describes the proof-of-concept (POC) implementation, how it satisf
 
 This is the exact logical flow implemented in code (`POST /match`):
 
-1. **Raw document intake** — Multipart upload: one job-description file + one or more resume files (`main.py`).
+1. **Raw document intake** — Multipart upload: one job-description file + one or more resume files (`api/routes/match.py`).
 2. **Parsing** — Bytes → `ParserRegistry` → format-specific `DocumentParser` → normalized `ParsedDocument` (plain text + metadata). Job and resumes use the **same** parsers and registry.
 3. **Scoring** — Text is **embedded** with OpenAI (`text-embedding-3-small` by default); **scores** are **cosine similarities** between the job-description vector and each resume vector (`app/services/embeddings.py`, `app/services/ranking.py`). This *is* the scoring stage (learned representation + geometric similarity), not a placeholder.
 4. **Ranked output** — Sort by score descending; return **top K** (default 10) with rank, label, score, format (upload), excerpt (`MatchResponse`).

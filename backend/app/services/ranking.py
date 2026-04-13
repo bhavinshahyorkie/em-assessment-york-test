@@ -1,3 +1,5 @@
+"""Ranking by cosine similarity between embedding vectors (job vs each candidate)."""
+
 from __future__ import annotations
 
 import math
@@ -5,6 +7,7 @@ from dataclasses import dataclass
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Cosine similarity in [-1, 1] for equal-length vectors; 0.0 if a vector has zero norm."""
     dot = sum(x * y for x, y in zip(a, b))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
@@ -18,6 +21,8 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
 
 @dataclass
 class RankedCandidate:
+    """One row after sorting: candidate identity, similarity score, display format, text snippet."""
+
     label: str
     score: float
     format_id: str
@@ -32,6 +37,7 @@ def rank_by_embedding(
     excerpts: list[str],
     top_k: int,
 ) -> list[RankedCandidate]:
+    """Sort candidates by similarity to the job embedding; return the top `top_k` rows."""
     scored: list[tuple[float, int]] = []
     for i, emb in enumerate(candidate_embeddings):
         s = cosine_similarity(job_embedding, emb)

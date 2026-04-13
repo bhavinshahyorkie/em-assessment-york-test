@@ -45,6 +45,7 @@ class ParserRegistry:
         self._by_id = {p.format_id: p for p in parsers}
 
     def parse(self, raw: bytes, filename: str, content_type: str | None) -> ParsedDocument:
+        """Pick a parser by filename/MIME, with byte sniffing when the extension does not match contents."""
         kind = sniff_binary_kind(raw)
         name_lower = (filename or "").lower()
 

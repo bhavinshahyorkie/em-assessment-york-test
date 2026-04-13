@@ -1,3 +1,5 @@
+"""Detect PDF / ZIP (OOXML) / OLE magic bytes for parser routing and user-facing errors."""
+
 from __future__ import annotations
 
 from typing import Literal

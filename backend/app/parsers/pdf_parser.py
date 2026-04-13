@@ -1,3 +1,5 @@
+"""PDF text extraction via PyMuPDF (fitz)."""
+
 from __future__ import annotations
 
 import fitz  # PyMuPDF
